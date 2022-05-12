@@ -1,7 +1,7 @@
-licenses(["notice"])  # Apache 2.0
-
-load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 load("//src/TulsiGeneratorIntegrationTests:tulsi_integration_test.bzl", "tulsi_integration_test")
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+licenses(["notice"])
 
 test_suite(name = "TulsiEndToEndTests")
 
@@ -13,6 +13,8 @@ swift_library(
     module_name = "TulsiEndToEndTestBase",
     deps = [
         "//src/TulsiGenerator:tulsi_generator_lib",
+        "//src/TulsiEndToEndTests/Resources/Buttons:all_files",
+        "//src/TulsiEndToEndTests/Resources/Buttons:other",
         "//src/TulsiGeneratorIntegrationTests:BazelIntegrationTestCase",
     ],
 )

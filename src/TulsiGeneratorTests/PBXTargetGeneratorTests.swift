@@ -44,6 +44,7 @@ class PBXTargetGeneratorTests: XCTestCase {
       bazelBinPath: "bazel-bin",
       project: project,
       buildScriptPath: "",
+      resignerScriptPath: "",
       stubInfoPlistPaths: stubPlistPaths,
       stubBinaryPaths: stubBinaryPaths,
       tulsiVersion: testTulsiVersion,
@@ -174,6 +175,7 @@ class PBXTargetGeneratorTestsWithFiles: XCTestCase {
       bazelBinPath: "bazel-bin",
       project: project,
       buildScriptPath: "",
+      resignerScriptPath: "",
       stubInfoPlistPaths: stubPlistPaths,
       stubBinaryPaths: stubBinaryPaths,
       tulsiVersion: testTulsiVersion,
@@ -273,15 +275,13 @@ class PBXTargetGeneratorTestsWithFiles: XCTestCase {
       "GCC_WARN_UNINITIALIZED_AUTOS": "YES",
       "GCC_WARN_UNUSED_FUNCTION": "YES",
       "GCC_WARN_UNUSED_VARIABLE": "YES",
-      "HEADER_SEARCH_PATHS": "$(TULSI_EXECUTION_ROOT) $(TULSI_WR)/bazel-bin $(TULSI_WR)/bazel-genfiles "
-        + "$(TULSI_EXECUTION_ROOT)/\(PBXTargetGenerator.tulsiIncludesPath)",
+      "HEADER_SEARCH_PATHS": "$(TULSI_BWRS) $(TULSI_WR)/bazel-bin $(TULSI_WR)/bazel-genfiles "
+        + "$(TULSI_BWRS)/\(PBXTargetGenerator.tulsiIncludesPath)",
       "ONLY_ACTIVE_ARCH": "YES",
       "PYTHONIOENCODING": "utf8",
       "TULSI_VERSION": testTulsiVersion,
-      PBXTargetGenerator.WorkspaceRootVarName: "$(SRCROOT)",
-      PBXTargetGenerator.BazelExecutionRootSymlinkVarName: "$(PROJECT_FILE_PATH)/" + PBXTargetGenerator.TulsiExecutionRootSymlinkPath,
-      PBXTargetGenerator.BazelExecutionRootSymlinkLegacyVarName: "$(PROJECT_FILE_PATH)/" + PBXTargetGenerator.TulsiExecutionRootSymlinkPath,
-      PBXTargetGenerator.BazelOutputBaseSymlinkVarName: "$(PROJECT_FILE_PATH)/" + PBXTargetGenerator.TulsiOutputBaseSymlinkPath,
+      "TULSI_WR": "$(SRCROOT)",
+      "TULSI_BWRS": "$(PROJECT_FILE_PATH)/.tulsi/tulsi-workspace",
     ]
 
     XCTAssertNotNil(topLevelConfigs["Debug"])
@@ -331,16 +331,14 @@ class PBXTargetGeneratorTestsWithFiles: XCTestCase {
       "GCC_WARN_UNINITIALIZED_AUTOS": "YES",
       "GCC_WARN_UNUSED_FUNCTION": "YES",
       "GCC_WARN_UNUSED_VARIABLE": "YES",
-      "HEADER_SEARCH_PATHS": "$(TULSI_EXECUTION_ROOT) $(TULSI_WR)/bazel-bin $(TULSI_WR)/bazel-genfiles "
-        + "$(TULSI_EXECUTION_ROOT)/\(PBXTargetGenerator.tulsiIncludesPath)",
+      "HEADER_SEARCH_PATHS": "$(TULSI_BWRS) $(TULSI_WR)/bazel-bin $(TULSI_WR)/bazel-genfiles "
+        + "$(TULSI_BWRS)/\(PBXTargetGenerator.tulsiIncludesPath)",
       "SDKROOT": projectSDKROOT,
       "ONLY_ACTIVE_ARCH": "YES",
       "PYTHONIOENCODING": "utf8",
       "TULSI_VERSION": testTulsiVersion,
-      PBXTargetGenerator.WorkspaceRootVarName: "$(SRCROOT)",
-      PBXTargetGenerator.BazelExecutionRootSymlinkVarName: "$(PROJECT_FILE_PATH)/" + PBXTargetGenerator.TulsiExecutionRootSymlinkPath,
-      PBXTargetGenerator.BazelExecutionRootSymlinkLegacyVarName: "$(PROJECT_FILE_PATH)/" + PBXTargetGenerator.TulsiExecutionRootSymlinkPath,
-      PBXTargetGenerator.BazelOutputBaseSymlinkVarName: "$(PROJECT_FILE_PATH)/" + PBXTargetGenerator.TulsiOutputBaseSymlinkPath,
+      "TULSI_WR": "$(SRCROOT)",
+      "TULSI_BWRS": "$(PROJECT_FILE_PATH)/.tulsi/tulsi-workspace",
     ]
 
     XCTAssertNotNil(topLevelConfigs["Debug"])
@@ -2601,7 +2599,7 @@ class PBXTargetGeneratorTestsWithFiles: XCTestCase {
     validateIndexerTarget(
       indexerTargetName,
       sourceFileNames: sourceFileNames,
-      bridgingHeader: "$(TULSI_EXECUTION_ROOT)/\(bridgingHeaderFilePath)",
+      bridgingHeader: "$(TULSI_BWRS)/\(bridgingHeaderFilePath)",
       inTargets: targets)
   }
 
@@ -2639,7 +2637,7 @@ class PBXTargetGeneratorTestsWithFiles: XCTestCase {
       inTargets: targets)
   }
 
-  func testGenerateIndexerWithXCDataModel() {
+  func testGenerateIndexerSkipsXCDataModel() {
     let dataModel = "test.xcdatamodeld"
     let ruleAttributes = [
       "datamodels": [
@@ -2664,13 +2662,11 @@ class PBXTargetGeneratorTestsWithFiles: XCTestCase {
       processedEntries: &proccessedEntries)
     targetGenerator.generateIndexerTargets()
 
-    var allSourceFiles = sourceFileNames
-    allSourceFiles.append(dataModel)
     let targets = project.targetByName
     XCTAssertEqual(targets.count, 1)
     validateIndexerTarget(
       indexerTargetName,
-      sourceFileNames: allSourceFiles,
+      sourceFileNames: sourceFileNames,
       inTargets: targets)
   }
 
@@ -3506,7 +3502,7 @@ class PBXTargetGeneratorTestsWithFiles: XCTestCase {
       expectedBuildSettings["USER_HEADER_SEARCH_PATHS"] = "$(TULSI_WR)"
     }
     if let pchFile = pchFile {
-      expectedBuildSettings["GCC_PREFIX_HEADER"] = "$(TULSI_EXECUTION_ROOT)/\(pchFile.path!)"
+      expectedBuildSettings["GCC_PREFIX_HEADER"] = "$(TULSI_BWRS)/\(pchFile.path!)"
     }
     if let bridgingHeader = bridgingHeader {
       expectedBuildSettings["SWIFT_OBJC_BRIDGING_HEADER"] = bridgingHeader

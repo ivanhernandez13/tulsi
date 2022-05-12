@@ -38,9 +38,6 @@ public enum BazelSettingFeature: Hashable, Pythonable {
   /// Should only be disabled if it causes errors.
   /// Known issues:
   /// - Bundles with spaces in the name
-  /// - When enabled, the working directory of the `ipa_post_processor` tool for `ios_application` is
-  ///   the `Payload` directory, not its parent directory.
-  ///   See https://github.com/bazelbuild/rules_apple/issues/733.
   case TreeArtifactOutputs
 
   /// TODO(b/111928007): Remove this and/or BazelSettingFeature once DebugPathNormalization is
@@ -120,7 +117,6 @@ protocol BazelSettingsProviderProtocol {
   /// Bazel build settings, used during Xcode/user Bazel builds.
   func buildSettings(bazel: String,
                      bazelExecRoot: String,
-                     bazelOutputBase: String,
                      options: TulsiOptionSet,
                      features: Set<BazelSettingFeature>,
                      buildRuleEntries: Set<RuleEntry>) -> BazelBuildSettings
@@ -241,7 +237,6 @@ class BazelSettingsProvider: BazelSettingsProviderProtocol {
 
   func buildSettings(bazel: String,
                      bazelExecRoot: String,
-                     bazelOutputBase: String,
                      options: TulsiOptionSet,
                      features: Set<BazelSettingFeature>,
                      buildRuleEntries: Set<RuleEntry>) -> BazelBuildSettings {
@@ -282,7 +277,6 @@ class BazelSettingsProvider: BazelSettingsProviderProtocol {
 
     return BazelBuildSettings(bazel: bazel,
                               bazelExecRoot: bazelExecRoot,
-                              bazelOutputBase: bazelOutputBase,
                               defaultPlatformConfigIdentifier: defaultConfig.identifier,
                               platformConfigurationFlags: nil,
                               swiftTargets: swiftTargets,

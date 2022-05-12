@@ -1,8 +1,8 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
 package(default_visibility = ["//:__subpackages__"])
 
 licenses(["notice"])
-
-load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 exports_files(["Info.plist"])
 
@@ -29,6 +29,7 @@ filegroup(
         [
             "*.lproj/*",
             "Assets.xcassets/**/*",
+            "Config/*",
         ],
         exclude = [
             "Assets.xcassets/AppIcon.appiconset/*",
