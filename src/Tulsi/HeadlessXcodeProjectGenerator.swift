@@ -99,6 +99,24 @@ struct HeadlessXcodeProjectGenerator {
       workspaceRootURL = projectWorkspaceRootURL as URL
     }
 
+    if let announcementIdToMarkRead = arguments.announcementId {
+      guard
+        let announcement = try Announcement.loadAnnouncement(byId: announcementIdToMarkRead)
+      else {
+        throw HeadlessModeError.invalidAnnouncementId
+      }
+
+      announcement.recordDismissal()
+      print("\(announcementIdToMarkRead) has been marked read and will not appear again.")
+    }
+
+    let announcement = try? Announcement.getNextUnreadAnnouncement()
+
+    if let announcementToDisplay = announcement, announcementToDisplay.shouldAppearAtTopOfCLIOutput
+    {
+      print(announcementToDisplay.createCLIOutput())
+    }
+
     print("Generating project into '\(outputFolderURL.path)' using:\n" +
               "\tconfig at '\(configURL.path)'\n" +
               "\tBazel workspace at '\(workspaceRootURL.path)'\n" +
@@ -119,6 +137,12 @@ struct HeadlessXcodeProjectGenerator {
         }
       case .failure:
         throw HeadlessModeError.generationFailed
+    }
+
+    if let announcementToDisplay = announcement,
+      !announcementToDisplay.shouldAppearAtTopOfCLIOutput
+    {
+      print(announcementToDisplay.createCLIOutput())
     }
   }
 

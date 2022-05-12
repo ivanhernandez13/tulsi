@@ -114,9 +114,8 @@ final class XCBuildConfiguration: PBXObjectProtocol {
 class PBXReference: PBXObjectProtocol {
   var globalID: String = ""
   let name: String
-  // be careful setting these; they're cached in PBXGroup
-  fileprivate(set) var path: String?
-  fileprivate(set) var sourceTree: SourceTree
+  var path: String?
+  let sourceTree: SourceTree
 
   var isa: String {
     assertionFailure("PBXReference must be subclassed")
@@ -236,19 +235,6 @@ final class PBXFileReference: PBXReference, Hashable {
       try serializer.addField("lastKnownFileType", uti)
     } else if let uti = explicitFileType {
       try serializer.addField("explicitFileType", uti)
-    }
-
-    // Give Starlark files Python syntax highlighting by default.
-    // It's quite a good match--and certainly a better default than no highlighting.
-    // Xcode's plugin functionality is currently so limited that we can't do better.
-    if name == "BUILD" || name == "WORKSPACE" || name.hasSuffix(".bzl") || name.hasSuffix(".sky") || name.hasSuffix(".star") || name.hasSuffix(".bazel") || name.hasSuffix(".BUILD") || name.hasSuffix(".WORKSPACE") {
-      try serializer.addField("xcLanguageSpecificationIdentifier", "xcode.lang.python")
-    } else if name.hasSuffix(".bazelrc") {
-      // Similarly, but shell for .bazelrc 
-      try serializer.addField("xcLanguageSpecificationIdentifier", "xcode.lang.sh")
-    } else if name.hasSuffix(".tulsigen") || name.hasSuffix(".tulsiconf") || name.hasSuffix(".tulsiconf-user") {
-      // Similarly, but JSON for Tulsi configuation files.
-      try serializer.addField("xcLanguageSpecificationIdentifier", "xcode.lang.json")
     }
   }
 }
@@ -388,22 +374,18 @@ class PBXGroup: PBXReference, Hashable {
         child.updatePathForChild(grandchild, currentPath: childPath)
       }
     } else if let child = child as? PBXFileReference {
-      updatePathForChildFile(child, toPath: childPath)
-    }
-  }
+      // Remove old source path reference. All PBXFileReferences should have valid paths as
+      // non-main/external groups no longer have any paths, meaning a PBXFileReference without a
+      // path shouldn't exist as it doesn't point to anything.
+      var sourceTreePath = SourceTreePath(sourceTree: child.sourceTree, path: child.path!)
+      fileReferencesBySourceTreePath.removeValue(forKey: sourceTreePath)
 
-  func updatePathForChildFile(
-    _ child: PBXFileReference,
-    toPath: String,
-    sourceTree: SourceTree? = nil) { // Source tree defaults to staying the same
-    // Updates internal index to match
-    fileReferencesBySourceTreePath.removeValue(
-      forKey: SourceTreePath(sourceTree: child.sourceTree, path: child.path!))
-    let newSourceTreePath =
-      SourceTreePath(sourceTree: sourceTree ?? child.sourceTree, path: toPath)
-    child.path = newSourceTreePath.path
-    child.sourceTree = newSourceTreePath.sourceTree
-    fileReferencesBySourceTreePath[newSourceTreePath] = child
+      // Add in new source path reference.
+      sourceTreePath = SourceTreePath(sourceTree: child.sourceTree, path: childPath)
+      fileReferencesBySourceTreePath[sourceTreePath] = child
+
+      child.path = childPath
+    }
   }
 
   /// Takes ownership of the children of the given group. Note that this leaves the "other" group in
@@ -898,7 +880,7 @@ class PBXTarget: PBXObjectProtocol, Hashable {
   /// The targets on which this target depends.
   var dependencies = [PBXTargetDependency]()
   /// Any targets which must be built by XCSchemes generated for this target.
-  var buildActionDependencies = Set<PBXTarget>()
+  var schemeBuildDependencies = Set<PBXTarget>()
   /// The build phases to be executed to generate this target.
   var buildPhases = [PBXBuildPhase]()
   /// Deployment target for this target, if available.
@@ -941,10 +923,11 @@ class PBXTarget: PBXObjectProtocol, Hashable {
     }
   }
 
-  /// Creates a BuildAction-only dependency on the given target. Unlike a true dependency, this
-  /// linkage is only intended to affect generated XCSchemes.
-  func createBuildActionDependencyOn(_ target: PBXTarget) {
-    buildActionDependencies.insert(target)
+  /// Creates a scheme BuildAction-only dependency on the given target. Unlike
+  /// a true dependency, this linkage is only intended to affect generated
+  /// XCSchemes.
+  func createSchemeBuildDependencyOn(_ target: PBXTarget) {
+    schemeBuildDependencies.insert(target)
   }
 
   func serializeInto(_ serializer: PBXProjFieldSerializer) throws {
@@ -991,7 +974,7 @@ final class PBXNativeTarget: PBXTarget {
 }
 
 
-/// Models a target that executes an arbitrary binary.
+/// Models a target that executes an arbitrary build tool.
 final class PBXLegacyTarget: PBXTarget {
   let buildArgumentsString: String
   let buildToolPath: String
@@ -1022,6 +1005,17 @@ final class PBXLegacyTarget: PBXTarget {
   }
 }
 
+/// Models an aggregate target representing an arbitrary binary with no
+/// configuration.
+final class PBXAggregateTarget: PBXTarget {
+  override var isa: String {
+    return "PBXAggregateTarget"
+  }
+
+  override init(name: String, deploymentTarget: DeploymentTarget?) {
+    super.init(name: name, deploymentTarget: deploymentTarget)
+  }
+}
 
 /// Models a link to a target or output file which may be in a different project.
 final class PBXContainerItemProxy: PBXObjectProtocol, Hashable {
@@ -1210,6 +1204,16 @@ final class PBXProject: PBXObjectProtocol {
                                 buildToolPath: buildToolPath,
                                 buildArguments: buildArguments,
                                 buildWorkingDirectory: buildWorkingDirectory)
+    targetByName[name] = value
+    return value
+  }
+
+
+  func createAggregateTarget(
+    _ name: String,
+    deploymentTarget: DeploymentTarget?
+  ) -> PBXAggregateTarget {
+    let value = PBXAggregateTarget(name: name, deploymentTarget: deploymentTarget)
     targetByName[name] = value
     return value
   }

@@ -1,8 +1,8 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
 package(default_visibility = ["//:__subpackages__"])
 
-licenses(["notice"])  # Apache 2.0
-
-load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+licenses(["notice"])
 
 exports_files(
     [

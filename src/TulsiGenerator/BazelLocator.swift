@@ -23,8 +23,7 @@ public struct BazelLocator {
   public static let DefaultBazelURLKey = "defaultBazelURL"
 
   public static var bazelURL: URL? {
-    if let bazelURL = UserDefaults.standard.url(forKey: BazelLocator.DefaultBazelURLKey),
-      FileManager.default.fileExists(atPath: bazelURL.path) {
+    if let bazelURL = UserDefaults.standard.url(forKey: BazelLocator.DefaultBazelURLKey) {
       return bazelURL
     }
 

@@ -231,8 +231,7 @@ final class BazelAspectInfoExtractor: QueuedLogging {
         "--features=-parse_headers",
         // Don't run validation actions during project generation; validation actions could
         // slow down the project generation or fail it.
-        // TODO: Switch to --norun_validations when we no longer need to support Bazel 4.
-        "--noexperimental_run_validations",
+        "--norun_validations",
         // The following flags WILL affect Bazel analysis caching.
         // Keep this consistent with bazel_build.py.
         "--aspects",
